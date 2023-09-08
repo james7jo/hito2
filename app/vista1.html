@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <script>
+        // Variable global para almacenar el ID del registro en edición
+        var editingId = null;
+
+        function doSearch() {
+            // (A1) GET SEARCH TERM
+            var data = new FormData(document.getElementById("mySearch"));
+
+            // (A2) AJAX - USE HTTP:// NOT FILE://
+            fetch("controlaador1.php", { method: "POST", body: data })
+                .then(res => res.json())
+                .then(res => {
+                    let resultsForm = document.getElementById("resultsForm");
+                    resultsForm.innerHTML = ""; // Limpia el formulario anterior
+
+                    if (res !== null) {
+                        // Crea un formulario para mostrar los resultados
+                        let form = document.createElement("form");
+                        form.setAttribute("id", "searchResultsForm");
+
+                        for (let r of res) {
+                            // Crea un campo de texto para cada resultado
+                            let input = document.createElement("input");
+                            input.setAttribute("type", "text");
+                            input.setAttribute("value", `${r.id} - ${r.name}`);
+                            input.setAttribute("readonly", "true");
+
+                            // Agrega botones para editar y eliminar
+                            let editButton = document.createElement("button");
+                            editButton.innerText = "Editar";
+                            editButton.setAttribute("onclick", `editRecord(${r.id})`);
+
+                            let deleteButton = document.createElement("button");
+                            deleteButton.innerText = "Eliminar";
+                            deleteButton.setAttribute("onclick", `deleteRecord(${r.id})`);
+
+                            form.appendChild(input);
+                            form.appendChild(editButton);
+                            form.appendChild(deleteButton);
+                        }
+
+                        resultsForm.appendChild(form);
+                    }
+                });
+            return false;
+        }
+
+        // Función para eliminar un registro
+        function deleteRecord(id) {
+    if (confirm("¿Estás seguro de que deseas eliminar este registro?")) {
+        // (A3) AJAX para eliminar el registro
+        fetch("controlaador1.php", { 
+            method: "POST", 
+            body: `action=delete&id=${id}` 
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log(data); // Agrega esta línea para depurar
+            if (data.success) {
+                alert("Registro eliminado exitosamente");
+                // Volver a cargar los resultados después de la eliminación
+                doSearch();
+            } else {
+                alert("Error al eliminar el registro");
+            }
+        })
+        .catch(error => {
+            console.error("Error en la solicitud AJAX:", error);
+        });
+    }
+}
+
+        // Función para editar un registro
+        function editRecord(id) {
+            // Habilitar la edición del nombre en la celda del resultado
+            let resultCell = document.querySelector(`input[value="${id} - "]`);
+            resultCell.removeAttribute("readonly");
+            resultCell.setAttribute("onblur", `saveChanges(${id})`);
+            resultCell.focus();
+        }
+
+        // Función para guardar los cambios al editar un registro
+        
+        function saveChanges(id) {
+            // Obtener el nuevo nombre editado
+            let editedName = document.querySelector(`input[value="${id} - "]`).value;
+            // Realizar una solicitud AJAX para actualizar el nombre en la base de datos
+            fetch("controlaador1.php", {
+                method: "POST",
+                body: `action=update&id=${id}&name=${editedName}`
+            })
+                .then(res => res.json())
+                .then(res => {
+                    if (res.success) {
+                        alert("Cambios guardados exitosamente");
+                    } else {
+                        alert("Error al guardar los cambios");
+                    }
+                    // Volver a cargar los resultados después de la edición
+                    doSearch();
+                });
+        }
+    </script>
+</head>
+<body>
+    <form id="mySearch" onsubmit="return doSearch()">
+        <input type="text" name="search" required>
+        <input type="submit" value="search">
+    </form>
+
+    <!-- Formulario para mostrar los resultados de la búsqueda -->
+    <div id="resultsForm"></div>
+</body>
+</html>
